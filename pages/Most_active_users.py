@@ -66,20 +66,28 @@ if not filtered_df.empty:
     fig.update_layout(yaxis=dict(autorange="reversed"))
     st.plotly_chart(fig, width='stretch')
 
-    # Chronological evolution line chart
-    st.subheader("Chronological evolution of tweets per category")
-    # Group by date and category
-    evolution = (
-        filtered_df.groupby(["createdAt", "categories"]).size().reset_index(name="tweet_count")
-    )
-    fig_line = px.line(
-        evolution,
-        x="createdAt",
-        y="tweet_count",
-        color="categories",
-        labels={"createdAt": "Date", "tweet_count": "Number of Tweets", "categories": "Category"}
-    )
-    st.plotly_chart(fig_line, width='stretch')
+    # Chronological evolution line charts per COP (language filter only)
+    st.subheader("Chronological evolution of tweets per category (per COP)")
+    # Apply only language filter for evolution chart
+    lang_mask = pd.Series(True, index=df.index)
+    if selected_langs:
+        lang_mask &= df["lang"].isin(selected_langs)
+    df_lang_filtered = df[lang_mask].copy()
+    available_cops_for_chart = sorted(df_lang_filtered["cop"].dropna().unique())
+    for cop in available_cops_for_chart:
+        cop_df = df_lang_filtered[df_lang_filtered["cop"] == cop]
+        evolution = (
+            cop_df.groupby(["createdAt", "categories"]).size().reset_index(name="tweet_count")
+        )
+        st.markdown(f"#### COP {int(cop) if float(cop).is_integer() else cop}")
+        fig_line = px.line(
+            evolution,
+            x="createdAt",
+            y="tweet_count",
+            color="categories",
+            labels={"createdAt": "Date", "tweet_count": "Number of Tweets", "categories": "Category"}
+        )
+        st.plotly_chart(fig_line, width='stretch')
     # Webdomains dashboard
     st.subheader("Most Frequent Webdomains")
     if "extracted_domains" in filtered_df.columns:
