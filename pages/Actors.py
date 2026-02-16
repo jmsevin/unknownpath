@@ -138,7 +138,7 @@ def main():
     if not table_df.empty:
         table_df = table_df.sort_values("Tweet count", ascending=False)
         table_df = table_df.reset_index(drop=True)
-    st.dataframe(table_df, use_container_width=True, hide_index=True)
+        st.dataframe(table_df, width='stretch', hide_index=True)
     st.subheader("Most frequent webdomains cited in tweets")
     n_domains = st.slider(
         "Number of top domains to show",
@@ -165,7 +165,7 @@ def main():
             top_domains.reset_index().rename(
                 columns={"extracted_domains": "Domain", "count": "Count"}
             ),
-            use_container_width=True,
+            width='stretch',
             hide_index=True
         )
     else:

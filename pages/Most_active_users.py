@@ -61,11 +61,10 @@ if not filtered_df.empty:
         y=category_counts[::-1].index,
         orientation="h",
         labels={"x": "Number of Tweets", "y": "Category"},
-        text=category_counts[::-1].values
     )
     fig.update_traces(textposition="outside", marker_color="#1f77b4")
     fig.update_layout(yaxis=dict(autorange="reversed"))
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
 
     # Chronological evolution line chart
     st.subheader("Chronological evolution of tweets per category")
@@ -80,6 +79,27 @@ if not filtered_df.empty:
         color="categories",
         labels={"createdAt": "Date", "tweet_count": "Number of Tweets", "categories": "Category"}
     )
-    st.plotly_chart(fig_line, use_container_width=True)
+    st.plotly_chart(fig_line, width='stretch')
+    # Webdomains dashboard
+    st.subheader("Most Frequent Webdomains")
+    if "extracted_domains" in filtered_df.columns:
+        # Split multiple domains if present (comma-separated), flatten, and count
+        all_domains = filtered_df["extracted_domains"].dropna().astype(str).str.split(",").explode().str.strip()
+        domain_counts = all_domains.value_counts(ascending=True).head(20)
+        if not domain_counts.empty:
+            fig_domains = px.bar(
+                domain_counts[::-1],
+                x=domain_counts[::-1].values,
+                y=domain_counts[::-1].index,
+                orientation="h",
+                labels={"x": "Number of Occurrences", "y": "Webdomain"}
+            )
+            fig_domains.update_traces(textposition="outside", marker_color="#2ca02c")
+            fig_domains.update_layout(yaxis=dict(autorange="reversed"))
+            st.plotly_chart(fig_domains, width='stretch')
+        else:
+            st.info("No webdomains found for the selected filters.")
+    else:
+        st.info("No webdomain data available in the dataset.")
 else:
     st.info("No data for most active users matches the selected filters.")
