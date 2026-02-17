@@ -59,7 +59,7 @@ def main():
     # Add option to select between Entities and Words
     stat_type = st.radio(
         "Select what to display:",
-        ["Entities", "Words", "Verbs", "Hashtags"],
+        ["Entities", "Words", "Verbs", "Hashtags", "Mentions"],
         horizontal=True
     )
     if stat_type == "Entities":
@@ -223,6 +223,48 @@ def main():
             height=500
         )
         fig.update_layout(barmode="stack", yaxis={'categoryorder': 'array', 'categoryarray': top_hashtags[::-1]})
+        st.plotly_chart(fig, width='stretch')
+    elif stat_type == "Mentions":
+        # Mention frequency dashboard logic
+        DATA_PATH = (
+            Path(__file__).parent.parent /
+            "data" /
+            "processed" /
+            "mention_frequencies.csv"
+        )
+        df = pd.read_csv(DATA_PATH, sep=";")
+        df["lang"] = df["lang"].fillna("unknown")
+        df["cop"] = df["cop"].astype("category")
+        filtered_df, selected_langs, selected_cops = apply_filters(df)
+        if filtered_df.empty:
+            st.warning(
+                "No data matches the selected filters. "
+                "Adjust the filters in the sidebar."
+            )
+            return
+        n_mentions = st.slider(
+            "Number of top mentions to show",
+            min_value=5,
+            max_value=30,
+            value=10
+        )
+        # Get top N mentions by frequency (across all COPs)
+        mention_totals = filtered_df.groupby("mention", as_index=False)["frequency"].sum()
+        top_mentions = mention_totals.sort_values("frequency", ascending=False).head(n_mentions)["mention"].tolist()
+        top_mentions_df = filtered_df[filtered_df["mention"].isin(top_mentions)]
+        fig = px.bar(
+            top_mentions_df,
+            x="frequency",
+            y="mention",
+            color="cop",
+            orientation="h",
+            title="Most Frequent Mentions (stacked by COP)",
+            labels={"frequency": "Frequency", "mention": "Mention", "cop": "COP"},
+            text_auto=True,
+            category_orders={"mention": top_mentions[::-1]},
+            height=500
+        )
+        fig.update_layout(barmode="stack", yaxis={'categoryorder': 'array', 'categoryarray': top_mentions[::-1]})
         st.plotly_chart(fig, width='stretch')
 
 
