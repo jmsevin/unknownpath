@@ -1,6 +1,7 @@
 import pandas as pd
 import streamlit as st
 from pathlib import Path
+import plotly.express as px
 
 
 def load_entity_data() -> pd.DataFrame:
@@ -58,7 +59,7 @@ def main():
     # Add option to select between Entities and Words
     stat_type = st.radio(
         "Select what to display:",
-        ["Entities", "Words"],
+        ["Entities", "Words", "Verbs"],
         horizontal=True
     )
     if stat_type == "Entities":
@@ -82,7 +83,6 @@ def main():
         entity_totals = filtered_df.groupby("entity_label", as_index=False)["frequency"].sum()
         top_entity_labels = entity_totals.sort_values("frequency", ascending=False).head(n_entities)["entity_label"].tolist()
         top_entities = filtered_df[filtered_df["entity_label"].isin(top_entity_labels)]
-        import plotly.express as px
         fig = px.bar(
             top_entities,
             x="frequency",
@@ -96,9 +96,9 @@ def main():
             height=500
         )
         fig.update_layout(barmode="stack", yaxis={'categoryorder': 'array', 'categoryarray': top_entity_labels[::-1]})
-        st.plotly_chart(fig, use_container_width=True)
-    else:
-        # Words dashboard logic (copied and adapted from Most_frequent_words.py)
+        st.plotly_chart(fig, width='stretch')
+    elif stat_type == "Words":
+        # Words dashboard logic
         DATA_PATH = (
             Path(__file__).parent.parent /
             "data" /
@@ -125,7 +125,6 @@ def main():
         word_totals = filtered_df.groupby("word", as_index=False)["frequency"].sum()
         top_words = word_totals.sort_values("frequency", ascending=False).head(n_words)["word"].tolist()
         top_words_df = filtered_df[filtered_df["word"].isin(top_words)]
-        import plotly.express as px
         fig = px.bar(
             top_words_df,
             x="frequency",
@@ -139,7 +138,49 @@ def main():
             height=500
         )
         fig.update_layout(barmode="stack", yaxis={'categoryorder': 'array', 'categoryarray': top_words[::-1]})
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
+    elif stat_type == "Verbs":
+        # Verbs dashboard logic
+        DATA_PATH = (
+            Path(__file__).parent.parent /
+            "data" /
+            "processed" /
+            "verb_frequencies.csv"
+        )
+        df = pd.read_csv(DATA_PATH, sep=";")
+        df["lang"] = df["lang"].fillna("unknown")
+        df["cop"] = df["cop"].astype("category")
+        filtered_df, selected_langs, selected_cops = apply_filters(df)
+        if filtered_df.empty:
+            st.warning(
+                "No data matches the selected filters. "
+                "Adjust the filters in the sidebar."
+            )
+            return
+        n_verbs = st.slider(
+            "Number of top verbs to show",
+            min_value=5,
+            max_value=30,
+            value=10
+        )
+        # Get top N verbs by frequency (across all COPs)
+        verb_totals = filtered_df.groupby("verb", as_index=False)["frequency"].sum()
+        top_verbs = verb_totals.sort_values("frequency", ascending=False).head(n_verbs)["verb"].tolist()
+        top_verbs_df = filtered_df[filtered_df["verb"].isin(top_verbs)]
+        fig = px.bar(
+            top_verbs_df,
+            x="frequency",
+            y="verb",
+            color="cop",
+            orientation="h",
+            title="Most Frequent Verbs (stacked by COP)",
+            labels={"frequency": "Frequency", "verb": "Verb", "cop": "COP"},
+            text_auto=True,
+            category_orders={"verb": top_verbs[::-1]},
+            height=500
+        )
+        fig.update_layout(barmode="stack", yaxis={'categoryorder': 'array', 'categoryarray': top_verbs[::-1]})
+        st.plotly_chart(fig, width='stretch')
 
 
 if __name__ == "__main__":
