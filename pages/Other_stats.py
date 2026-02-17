@@ -59,7 +59,7 @@ def main():
     # Add option to select between Entities and Words
     stat_type = st.radio(
         "Select what to display:",
-        ["Entities", "Words", "Verbs", "Hashtags", "Mentions"],
+        ["Entities", "Words", "Verbs", "Hashtags", "Mentions", "Terms"],
         horizontal=True
     )
     if stat_type == "Entities":
@@ -96,6 +96,48 @@ def main():
             height=500
         )
         fig.update_layout(barmode="stack", yaxis={'categoryorder': 'array', 'categoryarray': top_entity_labels[::-1]})
+        st.plotly_chart(fig, width='stretch')
+    elif stat_type == "Terms":
+        # Term frequency dashboard logic
+        DATA_PATH = (
+            Path(__file__).parent.parent /
+            "data" /
+            "processed" /
+            "term_frequencies.csv"
+        )
+        df = pd.read_csv(DATA_PATH, sep=";")
+        df["lang"] = df["lang"].fillna("unknown")
+        df["cop"] = df["cop"].astype("category")
+        filtered_df, selected_langs, selected_cops = apply_filters(df)
+        if filtered_df.empty:
+            st.warning(
+                "No data matches the selected filters. "
+                "Adjust the filters in the sidebar."
+            )
+            return
+        n_terms = st.slider(
+            "Number of top terms to show",
+            min_value=5,
+            max_value=30,
+            value=10
+        )
+        # Get top N terms by frequency (across all COPs)
+        term_totals = filtered_df.groupby("term", as_index=False)["frequency"].sum()
+        top_terms = term_totals.sort_values("frequency", ascending=False).head(n_terms)["term"].tolist()
+        top_terms_df = filtered_df[filtered_df["term"].isin(top_terms)]
+        fig = px.bar(
+            top_terms_df,
+            x="frequency",
+            y="term",
+            color="cop",
+            orientation="h",
+            title="Most Frequent Terms (stacked by COP)",
+            labels={"frequency": "Frequency", "term": "Term", "cop": "COP"},
+            text_auto=True,
+            category_orders={"term": top_terms[::-1]},
+            height=500
+        )
+        fig.update_layout(barmode="stack", yaxis={'categoryorder': 'array', 'categoryarray': top_terms[::-1]})
         st.plotly_chart(fig, width='stretch')
     elif stat_type == "Words":
         # Words dashboard logic
